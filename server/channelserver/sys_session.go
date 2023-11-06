@@ -15,6 +15,7 @@ import (
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
 	"erupe-ce/network/mhfpacket"
+
 	"go.uber.org/zap"
 )
 
@@ -48,6 +49,7 @@ type Session struct {
 	token            string
 	kqf              []byte
 	kqfOverride      bool
+	spawnInvasion    bool
 
 	semaphore *Semaphore // Required for the stateful MsgSysUnreserveStage packet.
 
