@@ -20,7 +20,7 @@ import (
 func doInvasionChance(s *Session) {
 	roll := rand.Intn(100)
 
-	if roll < 100 {
+	if roll < s.server.erupeConfig.GameplayOptions.EnhancedInvasions.InvasionChance {
 		s.spawnInvasion = true
 	}
 }
@@ -38,42 +38,46 @@ func getOriginalArea(s *Session, questId string) int {
 	return int(area[0])
 }
 
-func overwriteInvasion(s *Session, p mhfpacket.MHFPacket) {
+func overwriteInvasion(s *Session, p mhfpacket.MHFPacket) []byte {
 	pkt := p.(*mhfpacket.MsgSysGetFile)
 	area := getOriginalArea(s, pkt.Filename)
 	questId := ""
 
+	// get the last 2 characters of pkt.Filename
+	seasonTime := pkt.Filename[len(pkt.Filename)-2:]
+
 	switch int(area) {
 	case 2: // forest and hills
 	case 16: // forest and hills - night
-		questId = "26613d0"
+		questId = "26613"
 		break
 	case 3: // desert
 	case 19: // desert - night
-		questId = "26616d0"
+		questId = "26616"
 		break
 	case 6: // jungle
 	case 20: // jungle - night
-		questId = "26619d0"
+		questId = "26619"
 		break
 	case 26: // great forest
 	case 27: // great forest - night
-		questId = "26622d0"
+		questId = "26622"
 		break
 	case 31: // gorge
 	case 32: // gorge - night
-		questId = "26625d0"
+		questId = "26625"
 		break
-	default:
-		questId = "26622d0"
 	}
 
 	// if we don't have a questId, then we don't have an invasion for this area
 	if questId != "" {
-		pkt.Filename = questId
+		pkt.Filename = questId + seasonTime
 	}
 
 	s.spawnInvasion = false
+
+	data, _ := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename)))
+	return data
 }
 
 func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
@@ -107,11 +111,14 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			)
 		}
 
-		//if s.spawnInvasion {
-		overwriteInvasion(s, p)
-		//} else {
-		//	doInvasionChance(s)
-		//}
+		// Try and spawn unknown in this quest
+		if s.server.erupeConfig.GameplayOptions.EnhancedInvasions.UseNewInvasions {
+			if s.spawnInvasion {
+				overwriteInvasion(s, p)
+			} else {
+				doInvasionChance(s)
+			}
+		}
 
 		data, err := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename)))
 		if err != nil {

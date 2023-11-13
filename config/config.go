@@ -154,6 +154,12 @@ type GameplayOptions struct {
 	EnableNierEvent                bool    // Enables the Nier event in the Rasta Bar
 	DisableRoad                    bool    // Disables the Hunting Road
 	SeasonOverride                 bool    // Overrides the Quest Season with the current Mezeporta Season
+	EnhancedInvasions              CustomInvasions
+}
+
+type CustomInvasions struct {
+	UseNewInvasions bool
+	InvasionChance  int
 }
 
 // Discord holds the discord integration config.

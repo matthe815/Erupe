@@ -67,7 +67,11 @@
     "EnableHiganjimaEvent": false,
     "EnableNierEvent": false,
     "DisableRoad": false,
-    "SeasonOverride": false
+    "SeasonOverride": false,
+    "EnhancedInvasions": {
+      "UseNewInvasions": true,
+      "InvasionChance": 10
+    }
   },
   "Discord": {
     "Enabled": false,
