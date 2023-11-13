@@ -70,7 +70,7 @@
     "SeasonOverride": false,
     "EnhancedInvasions": {
       "UseNewInvasions": true,
-      "InvasionChance": 10
+      "InvasionChance": 100
     }
   },
   "Discord": {

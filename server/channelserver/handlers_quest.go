@@ -9,76 +9,12 @@ import (
 	"erupe-ce/network/mhfpacket"
 	"fmt"
 	"io"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
 
 	"go.uber.org/zap"
 )
-
-func doInvasionChance(s *Session) {
-	roll := rand.Intn(100)
-
-	if roll < s.server.erupeConfig.GameplayOptions.EnhancedInvasions.InvasionChance {
-		s.spawnInvasion = true
-	}
-}
-
-func getOriginalArea(s *Session, questId string) int {
-	data, _ := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", questId)))
-	decrypted := decryption.UnpackSimple(data)
-
-	fileBytes := byteframe.NewByteFrameFromBytes(decrypted)
-	fileBytes.SetLE()
-	fileBytes.Seek(228, 0)
-
-	area := fileBytes.ReadBytes(1)
-
-	return int(area[0])
-}
-
-func overwriteInvasion(s *Session, p mhfpacket.MHFPacket) []byte {
-	pkt := p.(*mhfpacket.MsgSysGetFile)
-	area := getOriginalArea(s, pkt.Filename)
-	questId := ""
-
-	// get the last 2 characters of pkt.Filename
-	seasonTime := pkt.Filename[len(pkt.Filename)-2:]
-
-	switch int(area) {
-	case 2: // forest and hills
-	case 16: // forest and hills - night
-		questId = "26613"
-		break
-	case 3: // desert
-	case 19: // desert - night
-		questId = "26616"
-		break
-	case 6: // jungle
-	case 20: // jungle - night
-		questId = "26619"
-		break
-	case 26: // great forest
-	case 27: // great forest - night
-		questId = "26622"
-		break
-	case 31: // gorge
-	case 32: // gorge - night
-		questId = "26625"
-		break
-	}
-
-	// if we don't have a questId, then we don't have an invasion for this area
-	if questId != "" {
-		pkt.Filename = questId + seasonTime
-	}
-
-	s.spawnInvasion = false
-
-	data, _ := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename)))
-	return data
-}
 
 func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysGetFile)
@@ -118,6 +54,7 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			} else {
 				doInvasionChance(s)
 			}
+
 		}
 
 		data, err := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename)))
