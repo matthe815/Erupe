@@ -69,8 +69,9 @@
     "DisableRoad": false,
     "SeasonOverride": false,
     "EnhancedInvasions": {
-      "UseNewInvasions": false,
-      "InvasionChance": 5
+      "UseNewInvasions": true,
+      "InvasionChance": 100,
+      "MinimumInvasionRank": 31
     }
   },
   "Discord": {
@@ -124,9 +125,9 @@
   ],
   "Database": {
     "Host": "localhost",
-    "Port": 5432,
+    "Port": 5433,
     "User": "postgres",
-    "Password": "",
+    "Password": "admin",
     "Database": "erupe"
   },
   "Sign": {

@@ -158,8 +158,9 @@ type GameplayOptions struct {
 }
 
 type CustomInvasions struct {
-	UseNewInvasions bool
-	InvasionChance  int
+	UseNewInvasions     bool
+	InvasionChance      int
+	MinimumInvasionRank int16
 }
 
 // Discord holds the discord integration config.

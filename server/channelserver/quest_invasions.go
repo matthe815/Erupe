@@ -18,6 +18,21 @@ func doInvasionChance(s *Session) {
 	}
 }
 
+func canInvasionHappen(s *Session, p mhfpacket.MHFPacket) bool {
+	pkt := p.(*mhfpacket.MsgSysGetFile)
+
+	data, _ := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename)))
+	decrypted := decryption.UnpackSimple(data)
+
+	fileBytes := byteframe.NewByteFrameFromBytes(decrypted)
+	fileBytes.SetLE()
+
+	fileBytes.Seek(270, 0)
+	questLevel := fileBytes.ReadInt16()
+
+	return questLevel >= s.server.erupeConfig.GameplayOptions.EnhancedInvasions.MinimumInvasionRank
+}
+
 func getOriginalArea(s *Session, questId string) int {
 	data, _ := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", questId)))
 	decrypted := decryption.UnpackSimple(data)

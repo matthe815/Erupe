@@ -47,8 +47,8 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			)
 		}
 
-		// Try and spawn unknown in this quest
-		if s.server.erupeConfig.GameplayOptions.EnhancedInvasions.UseNewInvasions {
+		// Try and spawn unknown in this quest if the quest is eligible.
+		if s.server.erupeConfig.GameplayOptions.EnhancedInvasions.UseNewInvasions && canInvasionHappen(s, p) {
 			if s.spawnInvasion {
 				overwriteInvasion(s, p)
 			} else {
