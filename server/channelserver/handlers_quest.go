@@ -49,8 +49,8 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 
 		if s.server.erupeConfig.GameplayOptions.SeasonOverride {
 			pkt.Filename = seasonConversion(s, pkt.Filename)
-    }
-    
+		}
+
 		// Try and spawn unknown in this quest if the quest is eligible.
 		if s.server.erupeConfig.GameplayOptions.EnhancedInvasions.UseNewInvasions && canInvasionHappen(s, p) {
 			if s.spawnInvasion {
@@ -58,7 +58,7 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			} else {
 				doInvasionChance(s)
 			}
-    }
+		}
 
 		data, err := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename)))
 		if err != nil {
