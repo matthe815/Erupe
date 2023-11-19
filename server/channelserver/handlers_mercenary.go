@@ -7,9 +7,10 @@ import (
 	"erupe-ce/network/mhfpacket"
 	"erupe-ce/server/channelserver/compression/deltacomp"
 	"erupe-ce/server/channelserver/compression/nullcomp"
-	"go.uber.org/zap"
 	"io"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 func handleMsgMhfLoadPartner(s *Session, p mhfpacket.MHFPacket) {
@@ -139,7 +140,7 @@ func handleMsgMhfCreateMercenary(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	var nextID uint32
 	_ = s.server.db.QueryRow("SELECT nextval('rasta_id_seq')").Scan(&nextID)
-	s.server.db.Exec("UPDATE characters SET rasta_id=$1 WHERE id=$2", nextID, s.charID)
+	s.server.db.Exec("UPDATE characters SET rasta_id=$1 WHERE id=$2", nextID+1, s.charID)
 	bf.WriteUint32(nextID)
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 }
