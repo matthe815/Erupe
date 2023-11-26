@@ -51,6 +51,8 @@ func overwriteInvasion(s *Session, p mhfpacket.MHFPacket) {
 	area := getOriginalArea(s, pkt.Filename)
 	questId := ""
 
+	// This function uses some custom quests to enable invasions in areas that don't normally support them.
+	// It will soft-fail if the questId is not found, so we don't need to worry about it.
 	switch int(area) {
 	case 2: // forest and hills
 		questId = "26613d0"
