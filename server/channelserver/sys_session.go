@@ -49,6 +49,7 @@ type Session struct {
 	token            string
 	kqf              []byte
 	kqfOverride      bool
+	spawnInvasion    bool
 
 	semaphore     *Semaphore // Required for the stateful MsgSysUnreserveStage packet.
 	semaphoreMode bool
