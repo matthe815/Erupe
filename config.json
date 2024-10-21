@@ -181,7 +181,7 @@
     {"Name": "HunterLife", "Enabled": true},
     {"Name": "Extra", "Enabled": true},
     {"Name": "Premium", "Enabled": true},
-    {"Name": "Assist", "Enabled": false},
+    {"Name": "Assist", "Enabled": true},
     {"Name": "N", "Enabled": false},
     {"Name": "Hiden", "Enabled": false},
     {"Name": "HunterSupport", "Enabled": false},
@@ -194,7 +194,7 @@
     "Host": "localhost",
     "Port": 5432,
     "User": "postgres",
-    "Password": "",
+    "Password": "admin",
     "Database": "erupe"
   },
   "Sign": {

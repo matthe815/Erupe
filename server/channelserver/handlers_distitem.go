@@ -29,94 +29,74 @@ type Distribution struct {
 
 func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateDistItem)
-
-	var itemDists []Distribution
 	bf := byteframe.NewByteFrame()
-	rows, err := s.server.db.Queryx(`
-		SELECT d.id, event_name, description, COALESCE(rights, 0) AS rights, COALESCE(selection, false) AS selection, times_acceptable,
-		COALESCE(min_hr, -1) AS min_hr, COALESCE(max_hr, -1) AS max_hr,
-		COALESCE(min_sr, -1) AS min_sr, COALESCE(max_sr, -1) AS max_sr,
-		COALESCE(min_gr, -1) AS min_gr, COALESCE(max_gr, -1) AS max_gr,
+	distCount := 0
+	dists, err := s.server.db.Queryx(`
+		SELECT d.id, event_name, description, times_acceptable,
+		min_hr, max_hr, min_sr, max_sr, min_gr, max_gr,
 		(
-    		SELECT count(*) FROM distributions_accepted da
-    		WHERE d.id = da.distribution_id AND da.character_id = $1
+    	SELECT count(*)
+    	FROM distributions_accepted da
+    	WHERE d.id = da.distribution_id
+    	AND da.character_id = $1
 		) AS times_accepted,
-		COALESCE(deadline, TO_TIMESTAMP(0)) AS deadline
+		CASE
+			WHEN (EXTRACT(epoch FROM deadline)::int) IS NULL THEN 0
+			ELSE (EXTRACT(epoch FROM deadline)::int)
+		END deadline
 		FROM distribution d
-		WHERE character_id = $1 AND type = $2 OR character_id IS NULL AND type = $2 ORDER BY id DESC
+		WHERE character_id = $1 AND type = $2 OR character_id IS NULL AND type = $2 ORDER BY id DESC;
 	`, s.charID, pkt.DistType)
-
-	if err == nil {
-		var itemDist Distribution
-		for rows.Next() {
-			err = rows.StructScan(&itemDist)
+	if err != nil {
+		s.logger.Error("Error getting distribution data from db", zap.Error(err))
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+	} else {
+		for dists.Next() {
+			distCount++
+			distData := &ItemDist{}
+			err = dists.StructScan(&distData)
 			if err != nil {
-				continue
+				s.logger.Error("Error parsing item distribution data", zap.Error(err))
 			}
-			itemDists = append(itemDists, itemDist)
+			bf.WriteUint32(distData.ID)
+			bf.WriteUint32(distData.Deadline)
+			bf.WriteUint32(0) // Unk
+			bf.WriteUint16(distData.TimesAcceptable)
+			bf.WriteUint16(distData.TimesAccepted)
+			bf.WriteUint16(0) // Unk
+			bf.WriteUint16(distData.MinHR)
+			bf.WriteUint16(distData.MaxHR)
+			bf.WriteUint16(distData.MinSR)
+			bf.WriteUint16(distData.MaxSR)
+			bf.WriteUint16(distData.MinGR)
+			bf.WriteUint16(distData.MaxGR)
+			bf.WriteUint32(0) // Unk
+			bf.WriteUint32(0) // Unk
+			ps.Uint16(bf, distData.EventName, true)
+			bf.WriteBytes(make([]byte, 391))
 		}
+		resp := byteframe.NewByteFrame()
+		resp.WriteUint16(uint16(distCount))
+		resp.WriteBytes(bf.Data())
+		resp.WriteUint8(0)
+		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 	}
+}
 
-	bf.WriteUint16(uint16(len(itemDists)))
-	for _, dist := range itemDists {
-		bf.WriteUint32(dist.ID)
-		bf.WriteUint32(uint32(dist.Deadline.Unix()))
-		bf.WriteUint32(dist.Rights)
-		bf.WriteUint16(dist.TimesAcceptable)
-		bf.WriteUint16(dist.TimesAccepted)
-		if _config.ErupeConfig.RealClientMode >= _config.G9 {
-			bf.WriteUint16(0) // Unk
-		}
-		bf.WriteInt16(dist.MinHR)
-		bf.WriteInt16(dist.MaxHR)
-		bf.WriteInt16(dist.MinSR)
-		bf.WriteInt16(dist.MaxSR)
-		bf.WriteInt16(dist.MinGR)
-		bf.WriteInt16(dist.MaxGR)
-		if _config.ErupeConfig.RealClientMode >= _config.G7 {
-			bf.WriteUint8(0) // Unk
-		}
-		if _config.ErupeConfig.RealClientMode >= _config.G6 {
-			bf.WriteUint16(0) // Unk
-		}
-		if _config.ErupeConfig.RealClientMode >= _config.G8 {
-			if dist.Selection {
-				bf.WriteUint8(2) // Selection
-			} else {
-				bf.WriteUint8(0)
-			}
-		}
-		if _config.ErupeConfig.RealClientMode >= _config.G7 {
-			bf.WriteUint16(0) // Unk
-			bf.WriteUint16(0) // Unk
-		}
-		if _config.ErupeConfig.RealClientMode >= _config.G10 {
-			bf.WriteUint8(0) // Unk
-		}
-		ps.Uint8(bf, dist.EventName, true)
-		k := 6
-		if _config.ErupeConfig.RealClientMode >= _config.G8 {
-			k = 13
-		}
-		for i := 0; i < 6; i++ {
-			for j := 0; j < k; j++ {
-				bf.WriteUint8(0)
-				bf.WriteUint32(0)
-			}
-		}
-		if _config.ErupeConfig.RealClientMode >= _config.Z2 {
-			i := uint8(0)
-			bf.WriteUint8(i)
-			if i <= 10 {
-				for j := uint8(0); j < i; j++ {
-					bf.WriteUint32(0)
-					bf.WriteUint32(0)
-					bf.WriteUint32(0)
-				}
-			}
-		}
-	}
-	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
+type ItemDist struct {
+	ID              uint32 `db:"id"`
+	Deadline        uint32 `db:"deadline"`
+	TimesAcceptable uint16 `db:"times_acceptable"`
+	TimesAccepted   uint16 `db:"times_accepted"`
+	MinHR           uint16 `db:"min_hr"`
+	MaxHR           uint16 `db:"max_hr"`
+	MinSR           uint16 `db:"min_sr"`
+	MaxSR           uint16 `db:"max_sr"`
+	MinGR           uint16 `db:"min_gr"`
+	MaxGR           uint16 `db:"max_gr"`
+	EventName       string `db:"event_name"`
+	Description     string `db:"description"`
+	Data            []byte `db:"data"`
 }
 
 type DistributionItem struct {

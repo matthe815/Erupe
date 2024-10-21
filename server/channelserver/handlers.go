@@ -312,6 +312,7 @@ func handleMsgSysRecordLog(s *Session, p mhfpacket.MHFPacket) {
 		for i := 0; i < 176; i++ {
 			val = bf.ReadUint8()
 			if val > 0 && mhfmon.Monsters[i].Large {
+				checkBounty(s, i)
 				s.server.db.Exec(`INSERT INTO kill_logs (character_id, monster, quantity, timestamp) VALUES ($1, $2, $3, $4)`, s.charID, i, val, TimeAdjusted())
 			}
 		}
@@ -319,6 +320,36 @@ func handleMsgSysRecordLog(s *Session, p mhfpacket.MHFPacket) {
 	// remove a client returning to town from reserved slots to make sure the stage is hidden from board
 	delete(s.stage.reservedClientSlots, s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+}
+
+func checkBounty(s *Session, monsterId int) {
+	println("Checking bounty", monsterId)
+	var id, monsterTarget, zennyReward, bountyType int
+	var itemRewards []uint8
+	bounties := s.server.db.QueryRow(`SELECT * FROM active_bounties WHERE type = 1`)
+	err := bounties.Scan(&id, &monsterTarget, &zennyReward, &itemRewards, &bountyType)
+	if err != nil {
+		s.logger.Panic(err.Error())
+		return
+	}
+	if monsterId == monsterTarget {
+		println("Bounty completed")
+		data := s.server.db.QueryRow(`INSERT INTO distribution (character_id, type, event_name, description) VALUES ($1, $2, $3, $4) RETURNING id`, s.charID, 1, "Daily Bounty - Reward", "You've completed the daily bounty!")
+		var id int
+		err := data.Scan(&id)
+		if err != nil {
+			s.logger.Panic(err.Error())
+			return
+		}
+
+		for itemIdx := 0; itemIdx < len(itemRewards); itemIdx++ {
+			_, err := s.server.db.Exec(`INSERT INTO distribution_items (distribution_id, item_type, item_id, quantity) VALUES ($1, $2, $3, $4)`, id, 7, itemRewards[itemIdx], 1)
+			if err != nil {
+				s.logger.Panic(err.Error())
+				return
+			}
+		}
+	}
 }
 
 func handleMsgSysEcho(s *Session, p mhfpacket.MHFPacket) {}

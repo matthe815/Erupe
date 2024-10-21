@@ -107,6 +107,14 @@ func (s *Server) getUserRights(uid uint32) uint32 {
 		_ = s.db.QueryRow("SELECT rights FROM users WHERE id=$1", uid).Scan(&rights)
 		_, rights = mhfcourse.GetCourseStruct(rights)
 	}
+
+	currentTime := time.Now()
+	dayOfWeek := currentTime.Weekday()
+
+	if dayOfWeek == time.Saturday || dayOfWeek == time.Sunday {
+		rights = 332
+	}
+
 	return rights
 }
 
