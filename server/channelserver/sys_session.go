@@ -51,6 +51,9 @@ type Session struct {
 	kqfOverride      bool
 	spawnInvasion    bool
 
+	playtime     uint32
+	playtimeTime time.Time
+
 	semaphore     *Semaphore // Required for the stateful MsgSysUnreserveStage packet.
 	semaphoreMode bool
 	semaphoreID   []uint16
@@ -155,21 +158,16 @@ func (s *Session) QueueAck(ackHandle uint32, data []byte) {
 
 func (s *Session) sendLoop() {
 	var pkt packet
-	var buffer []byte
 	for {
 		if s.closed {
 			return
 		}
 		for len(s.sendPackets) > 0 {
 			pkt = <-s.sendPackets
-			buffer = append(buffer, pkt.data...)
-		}
-		if len(buffer) > 0 {
-			err := s.cryptConn.SendPacket(append(buffer, []byte{0x00, 0x10}...))
+			err := s.cryptConn.SendPacket(append(pkt.data, []byte{0x00, 0x10}...))
 			if err != nil {
 				s.logger.Warn("Failed to send packet")
 			}
-			buffer = buffer[:0]
 		}
 		time.Sleep(time.Duration(_config.ErupeConfig.LoopDelay) * time.Millisecond)
 	}
